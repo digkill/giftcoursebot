@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: giftbot-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: giftbot
+      MYSQL_USER: botuser
+      MYSQL_PASSWORD: botpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  bot:
+    build: .
+    container_name: giftbot-app
+    restart: always
+    environment:
+      MYSQL_DSN: "botuser:botpass@tcp(mysql:3306)/giftbot"
+      TELEGRAM_BOT_TOKEN: "PUT_YOUR_BOT_TOKEN_HERE"
+    depends_on:
+      - mysql
+
+volumes:
+  db_data:

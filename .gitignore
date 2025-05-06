@@ -1,0 +1,4 @@
+bot.db
+.env
+bin/
+.idea

@@ -1,0 +1,6 @@
+bot.db
+.git
+.env
+*.zip
+*.tar.gz
+*.tgz
