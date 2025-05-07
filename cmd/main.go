@@ -2,17 +2,24 @@ package main
 
 import (
 	"github.com/digkill/giftcoursebot/internal/components/handlers"
+	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 
 	"github.com/digkill/giftcoursebot/internal/components/db"
 	"github.com/digkill/giftcoursebot/internal/components/scheduler"
-
 	"github.com/digkill/giftcoursebot/internal/models"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	logrus.SetLevel(logrus.DebugLevel)
+
+	if err := godotenv.Load(); err != nil {
+		logrus.Warnf("load env failed: %v", err)
+	}
+
 	dsn := os.Getenv("MYSQL_DSN")
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 
