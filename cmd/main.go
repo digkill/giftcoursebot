@@ -5,6 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
+	"os/signal"
 
 	"github.com/digkill/giftcoursebot/internal/components/db"
 	"github.com/digkill/giftcoursebot/internal/components/scheduler"
@@ -52,4 +53,10 @@ func main() {
 			handlers.HandleCallback(bot, update.CallbackQuery)
 		}
 	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	<-sig
+
+	log.Println("Shutting down gracefully...")
 }
