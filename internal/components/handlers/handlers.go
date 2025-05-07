@@ -13,6 +13,21 @@ func HandleMessage(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMode
 		// Регистрируем пользователя
 		userModel.DB.Exec("INSERT IGNORE INTO users (chat_id, start_date) VALUES (?, ?)", msg.Chat.ID, time.Now())
 
+		welcomeMessage := `🎉 *Добро пожаловать в наш подарок-курс!* 🎁
+
+Ты только что открыл дверь в маленькое путешествие знаний, вдохновения и радости! 💡
+
+📚 *Каждый день* тебя ждёт новый урок, только полезное и с заботой о тебе.
+
+👉 Первый урок уже на подходе. А если что — я всегда рядом!
+
+*Удачи тебе! Пусть этот курс принесёт пользу и удовольствие!* 🌟
+`
+
+		message := tgbotapi.NewMessage(msg.Chat.ID, welcomeMessage)
+		message.ParseMode = "Markdown"
+		bot.Send(message)
+
 		// Получаем первый урок (day_number = 0)
 		lesson := lessonModel.GetLessonByDay(0)
 		if lesson == nil {
@@ -21,6 +36,11 @@ func HandleMessage(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMode
 		}
 
 		// Отправляем сообщение
+		messageLesson := tgbotapi.NewMessage(msg.Chat.ID, "🎒 *Дружок, держи урок!* 📚")
+		messageLesson.ParseMode = "Markdown"
+
+		bot.Send(messageLesson)
+
 		reply := tgbotapi.NewMessage(msg.Chat.ID, lesson.Content)
 		reply.ReplyMarkup = FeedbackButtons()
 		bot.Send(reply)
