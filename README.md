@@ -73,6 +73,17 @@ WantedBy=multi-user.target
 Затем:
 
 ```bash
+
+# Сборка бота
+go build -o giftcoursebot ./cmd
+
+# Копирование файлов
+sudo cp giftcoursebot /opt/giftcoursebot/
+sudo cp .env /opt/giftcoursebot/
+sudo chown -R botuser:botuser /opt/giftcoursebot
+
+# systemd
+sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
 sudo systemctl enable giftcoursebot
 sudo systemctl start giftcoursebot
