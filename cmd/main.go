@@ -2,44 +2,33 @@ package main
 
 import (
 	"github.com/digkill/giftcoursebot/internal/components/db"
-	"github.com/digkill/giftcoursebot/internal/components/handlers"
 	"github.com/digkill/giftcoursebot/internal/components/scheduler"
+	"github.com/digkill/giftcoursebot/internal/models"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 )
 
 func main() {
-	logrus.SetLevel(logrus.DebugLevel)
+	dsn := os.Getenv("MYSQL_DSN")
+	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 
-	if err := godotenv.Load(); err != nil {
-		logrus.Warnf("load env failed: %v", err)
+	if dsn == "" || botToken == "" {
+		log.Fatal("MYSQL_DSN or TELEGRAM_BOT_TOKEN is not set")
 	}
 
-	var token = os.Getenv("YOUR_TELEGRAM_BOT_TOKEN")
+	db.Init(dsn)
 
-	bot, err := tgbotapi.NewBotAPI(token)
+	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	db := db.InitDB()
-	defer db.Close()
+	userModel := &models.UserModel{DB: db.Conn}
+	lessonModel := &models.LessonModel{DB: db.Conn}
 
-	go scheduler.StartScheduler(bot, db)
+	go scheduler.StartScheduler(bot, userModel, lessonModel)
 
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates := bot.GetUpdatesChan(u)
-
-	for update := range updates {
-		if update.Message != nil {
-			handlers.HandleMessage(bot, db, update.Message)
-		} else if update.CallbackQuery != nil {
-			handlers.HandleCallback(bot, db, update.CallbackQuery)
-		}
-	}
+	log.Println("Bot is running... Press Ctrl+C to stop")
+	select {} // block forever
 }

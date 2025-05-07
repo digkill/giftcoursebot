@@ -3,37 +3,21 @@ package db
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
-	"os"
+	"github.com/sirupsen/logrus"
 )
 
-type DB struct {
-	Conn *sql.DB
-}
+var Conn *sql.DB
 
-func InitDB() *DB {
-	// Пример: "user:password@tcp(127.0.0.1:3306)/giftbot"
-	dsn := os.Getenv("MYSQL_DSN")
-	db, err := sql.Open("mysql", dsn)
+func Init(dsn string) {
+	var err error
+	Conn, err = sql.Open("mysql", dsn)
 	if err != nil {
-		panic(err)
+		logrus.Fatal("Failed to connect to DB:", err)
 	}
 
-	db.Exec(`CREATE TABLE IF NOT EXISTS users (
-        chat_id BIGINT PRIMARY KEY,
-        start_date DATETIME,
-        last_lesson_sent INT DEFAULT 0
-    )`)
+	if err := Conn.Ping(); err != nil {
+		logrus.Fatal("DB unreachable:", err)
+	}
 
-	db.Exec(`CREATE TABLE IF NOT EXISTS feedback (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        chat_id BIGINT,
-        feedback TEXT,
-        created_at DATETIME
-    )`)
-
-	return &DB{Conn: db}
-}
-
-func (db *DB) Close() {
-	db.Conn.Close()
+	logrus.Info("Connected to database")
 }

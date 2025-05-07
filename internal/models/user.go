@@ -3,10 +3,11 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
-type UserModel struct {
+type User struct {
 	ChatID         int64          `db:"id"`
 	StartDate      time.Time      `db:"start_date"`
 	LastLessonSent int            `db:"last_lessonSent"`
@@ -14,42 +15,43 @@ type UserModel struct {
 	UpdatedAt      sql.NullString `db:"updated_at"`
 }
 
-type User struct {
-	db *sql.DB
+type UserModel struct {
+	DB *sql.DB
 }
 
-func (user *User) RegisterUser(chatID int64) {
-	now := time.Now().Format("2006-01-02 15:04:05")
-	_, err := user.db.Exec("INSERT IGNORE INTO users (chat_id, start_date, last_lesson_sent) VALUES (?, ?, 0)", chatID, now)
+func (u *UserModel) GetAllUsers() []User {
+	rows, err := u.DB.Query("SELECT chat_id, start_date FROM users")
 	if err != nil {
-		fmt.Println("RegisterUser error:", err)
-	}
-}
-
-func (user *User) GetAllUsers() []UserModel {
-	rows, err := user.db.Query("SELECT chat_id, start_date, last_lesson_sent FROM users")
-	if err != nil {
-		fmt.Println("GetAllUsers error:", err)
+		logrus.Error("GetAllUsers error:", err)
 		return nil
 	}
 	defer rows.Close()
 
 	var users []User
 	for rows.Next() {
-		var u User
-		var start time.Time
-		rows.Scan(&u.ChatID, &start, &u.LastLessonSent)
-		u.StartDate = start
-		users = append(users, u)
+		var user User
+		err := rows.Scan(&user.ChatID, &user.StartDate)
+		if err != nil {
+			continue
+		}
+		users = append(users, user)
 	}
 	return users
 }
 
-func (user *User) UpdateLastLesson(chatID int64, lessonNum int) {
-	user.db.Exec("UPDATE users SET last_lesson_sent = ? WHERE chat_id = ?", lessonNum, chatID)
+func (u *UserModel) RegisterUser(chatID int64) {
+	now := time.Now().Format("2006-01-02 15:04:05")
+	_, err := u.DB.Exec("INSERT IGNORE INTO users (chat_id, start_date, last_lesson_sent) VALUES (?, ?, 0)", chatID, now)
+	if err != nil {
+		fmt.Println("RegisterUser error:", err)
+	}
 }
 
-func (user *User) SaveFeedback(chatID int64, feedback string) {
+func (u *UserModel) UpdateLastLesson(chatID int64, lessonNum int) {
+	u.DB.Exec("UPDATE users SET last_lesson_sent = ? WHERE chat_id = ?", lessonNum, chatID)
+}
+
+func (u *UserModel) SaveFeedback(chatID int64, feedback string) {
 	now := time.Now().Format("2006-01-02 15:04:05")
-	user.db.Exec("INSERT INTO feedback (chat_id, feedback, created_at) VALUES (?, ?, ?)", chatID, feedback, now)
+	u.DB.Exec("INSERT INTO feedback (chat_id, feedback, created_at) VALUES (?, ?, ?)", chatID, feedback, now)
 }
