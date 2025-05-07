@@ -1,12 +1,15 @@
 package main
 
 import (
-	"github.com/digkill/giftcoursebot/internal/components/db"
-	"github.com/digkill/giftcoursebot/internal/components/scheduler"
-	"github.com/digkill/giftcoursebot/internal/models"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/digkill/giftcoursebot/internal/components/handlers"
 	"log"
 	"os"
+
+	"github.com/digkill/giftcoursebot/internal/components/db"
+	"github.com/digkill/giftcoursebot/internal/components/scheduler"
+
+	"github.com/digkill/giftcoursebot/internal/models"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func main() {
@@ -29,6 +32,17 @@ func main() {
 
 	go scheduler.StartScheduler(bot, userModel, lessonModel)
 
-	log.Println("Bot is running... Press Ctrl+C to stop")
-	select {} // block forever
+	log.Println("Bot is running...")
+
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+	updates := bot.GetUpdatesChan(u)
+
+	for update := range updates {
+		if update.Message != nil {
+			handlers.HandleMessage(bot, userModel, lessonModel, update.Message)
+		} else if update.CallbackQuery != nil {
+			handlers.HandleCallback(bot, update.CallbackQuery)
+		}
+	}
 }

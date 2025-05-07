@@ -16,3 +16,10 @@ CREATE TABLE IF NOT EXISTS user_lessons (
                                             sent_at DATETIME,
                                             UNIQUE KEY unique_user_lesson (user_id, lesson_id)
     );
+
+CREATE TABLE IF NOT EXISTS user_feedback (
+                                             id INT AUTO_INCREMENT PRIMARY KEY,
+                                             chat_id BIGINT,
+                                             feedback TEXT,
+                                             created_at DATETIME
+);
