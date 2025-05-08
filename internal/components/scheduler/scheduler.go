@@ -16,7 +16,7 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 
 		users := userModel.GetAllUsers()
 		for _, user := range users {
-			daysSinceStart := int(time.Since(user.StartDate).Hours() / 0.05)
+			daysSinceStart := int(time.Since(user.StartDate).Hours() / 24)
 
 			// Получаем все уроки, которые пользователь уже получил
 			sentLessonIDs := lessonModel.GetSentLessonIDs(user.ChatID)
