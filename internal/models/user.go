@@ -32,6 +32,7 @@ func (u *UserModel) GetAllUsers() []User {
 		var user User
 		err := rows.Scan(&user.ChatID, &user.StartDate)
 		if err != nil {
+			logrus.Error("Scan user:", err)
 			continue
 		}
 		users = append(users, user)
