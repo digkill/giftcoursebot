@@ -9,8 +9,8 @@ import (
 
 type User struct {
 	ChatID         int64          `db:"id"`
-	StartDate      time.Time      `db:"start_date"`
-	LastLessonSent int            `db:"last_lessonSent"`
+	StartDate      string         `db:"start_date"`
+	LastLessonSent sql.NullInt32  `db:"last_lessonSent"`
 	CreatedAt      sql.NullString `db:"created_at"`
 	UpdatedAt      sql.NullString `db:"updated_at"`
 }
