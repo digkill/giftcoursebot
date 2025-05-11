@@ -9,7 +9,7 @@ import (
 )
 
 func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonModel *models.LessonModel) {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(1 * time.Hour)
 
 	for {
 		<-ticker.C
@@ -18,7 +18,7 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 		for _, user := range users {
 			logrus.Infof("Проверяем пользователя %d", user.ChatID)
 			daysSinceStart := int(time.Since(user.StartDate).Hours() / 24)
-			daysSinceStart = 1
+
 			logrus.Infof("Прошло дней с начала: %d", daysSinceStart)
 			// Получаем все уроки, которые пользователь уже получил
 			sentLessonIDs := lessonModel.GetSentLessonIDs(user.ChatID)
