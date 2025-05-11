@@ -9,7 +9,7 @@ import (
 )
 
 func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonModel *models.LessonModel) {
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(1 * time.Minute)
 
 	for {
 		<-ticker.C
@@ -25,11 +25,13 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 			nextLesson := lessonModel.GetLessonByDay(daysSinceStart)
 
 			if nextLesson == nil {
+				logrus.Warn("Все уроки пройдены")
 				continue // Все уроки пройдены
 			}
 
 			// Проверяем, отправлялся ли уже этот урок
 			if contains(sentLessonIDs, int(nextLesson.ID)) {
+				logrus.Warn("Уже отправили")
 				continue
 			}
 
