@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/digkill/giftcoursebot/internal/components/handlers"
+	logger "github.com/digkill/giftcoursebot/internal/components/log"
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
@@ -15,7 +16,10 @@ import (
 )
 
 func main() {
-	logrus.SetLevel(logrus.DebugLevel)
+
+	l := logrus.New()
+	lg := logger.NewLog(l)
+	lg.Init()
 
 	if err := godotenv.Load(); err != nil {
 		logrus.Warnf("load env failed: %v", err)
@@ -56,7 +60,10 @@ func main() {
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
-	<-sig
 
-	log.Println("Shutting down gracefully...")
+	go func() {
+		<-sig
+		log.Println("Shutting down gracefully...")
+		os.Exit(0)
+	}()
 }

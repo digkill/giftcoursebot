@@ -16,8 +16,9 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 
 		users := userModel.GetAllUsers()
 		for _, user := range users {
+			logrus.Infof("Проверяем пользователя %d", user.ChatID)
 			daysSinceStart := int(time.Since(user.StartDate).Hours() / 24)
-			daysSinceStart = 2
+			logrus.Infof("Прошло дней с начала: %d", daysSinceStart)
 			// Получаем все уроки, которые пользователь уже получил
 			sentLessonIDs := lessonModel.GetSentLessonIDs(user.ChatID)
 
@@ -25,13 +26,13 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 			nextLesson := lessonModel.GetLessonByDay(daysSinceStart)
 
 			if nextLesson == nil {
-				logrus.Warn("Все уроки пройдены")
+				logrus.Warnf("Урок на день %d не найден", daysSinceStart)
 				continue // Все уроки пройдены
 			}
 
 			// Проверяем, отправлялся ли уже этот урок
 			if contains(sentLessonIDs, int(nextLesson.ID)) {
-				logrus.Warn("Уже отправили")
+				logrus.Warnf("Урок %d уже отправлен пользователю %d", nextLesson.ID, user.ChatID)
 				continue
 			}
 
@@ -40,11 +41,15 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 			msg.ReplyMarkup = FeedbackButtons()
 
 			if _, err := bot.Send(msg); err != nil {
+				logrus.Warnf("Ошибка при отправке сообщения пользователю %d: %v", user.ChatID, err)
+
 				logrus.Warnf("[Scheduler][StartScheduler] Error sending to %d: %v", user.ChatID, err)
 				continue
 			}
 
 			// Сохраняем факт отправки
+			logrus.Infof("Урок %d отправлен пользователю %d", nextLesson.ID, user.ChatID)
+
 			lessonModel.MarkLessonSent(user.ChatID, int(nextLesson.ID))
 		}
 	}
