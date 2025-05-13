@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func EncodeImageToBase64(imageBytes []byte, fileMimeType string) (string, error) {
@@ -55,7 +57,7 @@ func SendMedia(file *os.File, bot *tgbotapi.BotAPI, channelId int64, caption str
 		// Отправляем как анимацию (GIF будет воспроизводиться)
 		msg := tgbotapi.NewAnimation(channelId, tgbotapi.FileReader{Name: file.Name(), Reader: file})
 		msg.Caption = caption
-		_, err := bot.Send(msg)
+		err := SafeSend(bot, msg)
 		if err != nil {
 			log.Println("Ошибка отправки анимации:", err)
 		}
@@ -64,7 +66,7 @@ func SendMedia(file *os.File, bot *tgbotapi.BotAPI, channelId int64, caption str
 		// Отправляем как фото
 		msg := tgbotapi.NewPhoto(channelId, tgbotapi.FileReader{Name: file.Name(), Reader: file})
 		msg.Caption = caption
-		_, err := bot.Send(msg)
+		err := SafeSend(bot, msg)
 		if err != nil {
 			log.Println("Ошибка отправки фото:", err)
 		}
@@ -73,7 +75,7 @@ func SendMedia(file *os.File, bot *tgbotapi.BotAPI, channelId int64, caption str
 		// Отправляем как документ
 		msg := tgbotapi.NewDocument(channelId, tgbotapi.FileReader{Name: file.Name(), Reader: file})
 		msg.Caption = caption
-		_, err := bot.Send(msg)
+		err := SafeSend(bot, msg)
 		if err != nil {
 			log.Println("Ошибка отправки документа:", err)
 		}
@@ -106,26 +108,52 @@ func SendMediaSmart(file *os.File, bot *tgbotapi.BotAPI, channelId int64, captio
 			// gif как анимацию
 			msg := tgbotapi.NewAnimation(channelId, tgbotapi.FileReader{Name: file.Name(), Reader: file})
 			msg.Caption = caption
-			_, err = bot.Send(msg)
+			err = SafeSend(bot, msg)
 			return err
 		} else {
 			// остальное как фото
 			msg := tgbotapi.NewPhoto(channelId, tgbotapi.FileReader{Name: file.Name(), Reader: file})
 			msg.Caption = caption
-			_, err = bot.Send(msg)
+			err = SafeSend(bot, msg)
 			return err
 		}
 	} else if strings.HasPrefix(mimeType, "video/") {
 		// видео (mp4) — через анимацию (или можешь через SendVideo, если хочешь)
 		msg := tgbotapi.NewAnimation(channelId, tgbotapi.FileReader{Name: file.Name(), Reader: file})
 		msg.Caption = caption
-		_, err = bot.Send(msg)
+		err = SafeSend(bot, msg)
 		return err
 	} else {
 		// все остальное — как документ
 		msg := tgbotapi.NewDocument(channelId, tgbotapi.FileReader{Name: file.Name(), Reader: file})
 		msg.Caption = caption
-		_, err = bot.Send(msg)
+		err = SafeSend(bot, msg)
+		return err
+	}
+}
+
+// Универсальный отправитель с автоматическим retry при 429
+func SafeSend(bot *tgbotapi.BotAPI, msg tgbotapi.Chattable) error {
+	for {
+		_, err := bot.Send(msg)
+		if err == nil {
+			return nil
+		}
+
+		var apiErr *tgbotapi.Error
+		if errors.As(err, &apiErr) {
+			// Корректная проверка RetryAfter
+			if apiErr.ResponseParameters.RetryAfter > 0 {
+				log.Printf("Telegram API rate limit hit. Retrying after %d seconds...\n", apiErr.ResponseParameters.RetryAfter)
+				time.Sleep(time.Duration(apiErr.ResponseParameters.RetryAfter) * time.Second)
+				continue
+			}
+
+			log.Printf("Telegram API error: %v\n", apiErr.Message)
+			return apiErr
+		}
+
+		log.Printf("Unknown error sending message: %v\n", err)
 		return err
 	}
 }

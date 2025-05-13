@@ -12,17 +12,15 @@ import (
 )
 
 func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonModel *models.LessonModel, lg *logger.Log) {
-	ticker := time.NewTicker(1 * time.Minute)
-	daysSinceStart := 0
+	ticker := time.NewTicker(1 * time.Hour)
+
 	for {
 		<-ticker.C
 
 		users := userModel.GetAllUsers()
 		for _, user := range users {
 			lg.Logger.Infof("Проверяем пользователя %d", user.ChatID)
-			// daysSinceStart := int(time.Since(user.StartDate).Hours() / 24)
-
-			daysSinceStart = daysSinceStart + 1
+			daysSinceStart := int(time.Since(user.StartDate).Hours() / 24)
 
 			lg.Logger.Infof("Прошло дней с начала: %d", daysSinceStart)
 			// Получаем все уроки, которые пользователь уже получил
@@ -45,11 +43,11 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 			// Отправляем урок
 			msgTitle := tgbotapi.NewMessage(user.ChatID, "🎓 "+nextLesson.Title)
 			msgTitle.ParseMode = "Markdown"
-			bot.Send(msgTitle)
+			helpers.SafeSend(bot, msgTitle)
 
 			msgContent := tgbotapi.NewMessage(user.ChatID, nextLesson.Content)
 			msgContent.ParseMode = "Markdown"
-			bot.Send(msgContent)
+			helpers.SafeSend(bot, msgContent)
 
 			imageDir := "./assets/images/"
 			imageOutputPath := filepath.Join(imageDir, nextLesson.Image)
@@ -83,7 +81,7 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 			reply := tgbotapi.NewMessage(user.ChatID, nextLesson.Link)
 			// reply.ParseMode = "Markdown"
 			reply.ReplyMarkup = FeedbackButtons()
-			_, err = bot.Send(reply)
+			helpers.SafeSend(bot, reply)
 			if err != nil {
 				lg.Logger.Warnf("failed to send link: %w", err)
 			}

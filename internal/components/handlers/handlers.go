@@ -38,11 +38,11 @@ func HandleMessage(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMode
 		// Отправляем урок
 		msgTitle := tgbotapi.NewMessage(msg.Chat.ID, lesson.Title)
 		msgTitle.ParseMode = "Markdown"
-		bot.Send(msgTitle)
+		helpers.SafeSend(bot, msgTitle)
 
 		msgContent := tgbotapi.NewMessage(msg.Chat.ID, lesson.Content)
 		msgContent.ParseMode = "Markdown"
-		bot.Send(msgContent)
+		helpers.SafeSend(bot, msgContent)
 
 		imageDir := "./assets/images/"
 		imageOutputPath := filepath.Join(imageDir, lesson.Image)
@@ -76,10 +76,7 @@ func HandleMessage(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMode
 		reply := tgbotapi.NewMessage(msg.Chat.ID, lesson.Link)
 		// reply.ParseMode = "Markdown"
 		reply.ReplyMarkup = FeedbackButtons()
-		_, err = bot.Send(reply)
-		if err != nil {
-			lg.Logger.Warnf("failed to send link: %w", err)
-		}
+		helpers.SafeSend(bot, reply)
 
 		// Помечаем, что урок отправлен
 		lessonModel.MarkLessonSent(msg.Chat.ID, int(lesson.ID))
