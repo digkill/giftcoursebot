@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/digkill/giftcoursebot/internal/components/handlers"
-	logger "github.com/digkill/giftcoursebot/internal/components/log"
+	logger "github.com/digkill/giftcoursebot/internal/components/logger"
 	"github.com/sirupsen/logrus"
 	"log"
 	"os"
@@ -42,7 +42,7 @@ func main() {
 	userModel := &models.UserModel{DB: db.Conn}
 	lessonModel := &models.LessonModel{DB: db.Conn}
 
-	go scheduler.StartScheduler(bot, userModel, lessonModel)
+	go scheduler.StartScheduler(bot, userModel, lessonModel, lg)
 
 	log.Println("Bot is running...")
 
@@ -52,7 +52,7 @@ func main() {
 
 	for update := range updates {
 		if update.Message != nil {
-			handlers.HandleMessage(bot, userModel, lessonModel, update.Message)
+			handlers.HandleMessage(bot, userModel, lessonModel, update.Message, lg)
 		} else if update.CallbackQuery != nil {
 			handlers.HandleCallback(bot, update.CallbackQuery)
 		}

@@ -9,6 +9,12 @@ type Lesson struct {
 	ID        int64          `db:"id"`
 	Title     string         `db:"title"`
 	Content   string         `db:"content"`
+	Image     string         `db:"image"`
+	Image2    string         `db:"image2"`
+	Caption   string         `db:"caption"`
+	Caption2  string         `db:"caption2"`
+	Link      string         `db:"link"`
+	Slug      sql.NullString `db:"slug"`
 	CreatedAt sql.NullString `db:"created_at"`
 	UpdatedAt sql.NullString `db:"updated_at"`
 }
@@ -18,9 +24,9 @@ type LessonModel struct {
 }
 
 func (l *LessonModel) GetLessonByDay(day int) *Lesson {
-	row := l.DB.QueryRow("SELECT id, content FROM lessons WHERE day_number = ? LIMIT 1", day)
+	row := l.DB.QueryRow("SELECT id, title, content, image, image2, caption, caption2, slug, link, created_at, updated_at FROM lessons WHERE day_number = ? LIMIT 1", day)
 	var lesson Lesson
-	err := row.Scan(&lesson.ID, &lesson.Content)
+	err := row.Scan(&lesson.ID, &lesson.Title, &lesson.Content, &lesson.Image, &lesson.Image2, &lesson.Caption, &lesson.Caption2, &lesson.Slug, &lesson.Link, &lesson.CreatedAt, &lesson.UpdatedAt)
 	if err != nil {
 		logrus.Warn("Lesson not found for day:", day)
 		return nil
