@@ -4,12 +4,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/digkill/giftcoursebot/internal/components/logger"
+	"github.com/digkill/giftcoursebot/internal/models"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"io"
 	"log"
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -156,4 +159,154 @@ func SafeSend(bot *tgbotapi.BotAPI, msg tgbotapi.Chattable) error {
 		log.Printf("Unknown error sending message: %v\n", err)
 		return err
 	}
+}
+
+type MediaMeta struct {
+	Width    int
+	Height   int
+	Duration int
+}
+
+func CreateInputMedia(fileName string, data []byte, caption string, isFirst bool, meta *MediaMeta) interface{} {
+	ext := strings.ToLower(filepath.Ext(fileName))
+
+	// Создаем FileBytes для файла
+	requestFile := tgbotapi.FileBytes{
+		Name:  fileName,
+		Bytes: data,
+	}
+
+	switch ext {
+	case ".gif":
+		media := tgbotapi.NewInputMediaAnimation(requestFile)
+		if meta != nil {
+			media.Width = meta.Width
+			media.Height = meta.Height
+			media.Duration = meta.Duration
+		}
+		if isFirst {
+			media.Caption = caption
+			media.ParseMode = "Markdown"
+		}
+		return media
+
+	case ".jpg", ".jpeg", ".png", ".webp":
+		media := tgbotapi.NewInputMediaPhoto(requestFile)
+		if isFirst {
+			media.Caption = caption
+			media.ParseMode = "Markdown"
+		}
+		return media
+
+	case ".mp4":
+		media := tgbotapi.NewInputMediaVideo(requestFile)
+		if meta != nil {
+			media.Width = meta.Width
+			media.Height = meta.Height
+			media.Duration = meta.Duration
+		}
+		if isFirst {
+			media.Caption = caption
+			media.ParseMode = "Markdown"
+		}
+		return media
+
+	default:
+		media := tgbotapi.NewInputMediaDocument(requestFile)
+		if isFirst {
+			media.Caption = caption
+			media.ParseMode = "Markdown"
+		}
+		return media
+	}
+}
+
+func SendLesson(bot *tgbotapi.BotAPI, lg *logger.Log, lesson *models.Lesson, chatId int64, message string) {
+
+	// Отправляем урок
+	msgTitle := tgbotapi.NewMessage(chatId, message+"  \n\n"+lesson.Title+"  \n\n"+lesson.Content+"  \n\n"+lesson.Link+"  \n\n"+"*Самостоятельные задания:*")
+	msgTitle.ParseMode = "Markdown"
+	msgTitle.ReplyMarkup = FeedbackButtons()
+	_, err := bot.Send(msgTitle)
+	if err != nil {
+		lg.Logger.Warnf("failed to send start content: %v", err)
+	}
+
+	imageDir := "./assets/images/"
+
+	imagePath1 := filepath.Join(imageDir, "lesson1.mp4")
+	imagePath2 := filepath.Join(imageDir, "lesson7.mp4")
+
+	data1, err := os.ReadFile(imagePath1)
+	if err != nil {
+		lg.Logger.Warnf("failed to read %s: %v", imagePath1, err)
+		return
+	}
+
+	data2, err := os.ReadFile(imagePath2)
+	if err != nil {
+		lg.Logger.Warnf("failed to read %s: %v", imagePath2, err)
+		return
+	}
+
+	// Общая подпись (будет только у первого элемента)
+	combinedCaption := fmt.Sprintf("📸 %s\n\n🖼️ %s", lesson.Caption, lesson.Caption2)
+
+	// Метаданные для GIF (по желанию)
+	//meta := &MediaMeta{Width: 480, Height: 320, Duration: 10}
+
+	// Формируем список media
+	mediaGroup := []interface{}{
+		CreateInputMedia("lesson1.mp4", data1, combinedCaption, true, nil),
+		CreateInputMedia("lesson2.mp4", data2, "", false, nil),
+	}
+	_, err = bot.SendMediaGroup(tgbotapi.NewMediaGroup(chatId, mediaGroup))
+	if err != nil {
+		log.Printf("Failed to send media group: %v", err)
+	}
+
+}
+
+func FeedbackButtons() tgbotapi.InlineKeyboardMarkup {
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("👍", "feedback_good"),
+			tgbotapi.NewInlineKeyboardButtonData("👎", "feedback_bad"),
+		),
+	)
+}
+
+func ConvertGifToMp4(inputPath, outputPath string) error {
+	cmd := exec.Command("ffmpeg", "-y", "-i", inputPath, "-movflags", "+faststart", "-pix_fmt", "yuv420p", outputPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("ffmpeg error: %v\nOutput: %s", err, out)
+		return err
+	}
+	return nil
+}
+
+func ConvertGifToMp4Folder() {
+	inputDir := "./assets/images"
+
+	err := filepath.Walk(inputDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && strings.HasSuffix(strings.ToLower(info.Name()), ".gif") {
+			outputPath := strings.TrimSuffix(path, filepath.Ext(path)) + ".mp4"
+			log.Printf("Конвертируем: %s → %s\n", path, outputPath)
+			if err := ConvertGifToMp4(path, outputPath); err != nil {
+				log.Printf("Ошибка при конвертации %s: %v", path, err)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Fatalf("Ошибка обхода директории: %v", err)
+	}
+
+	log.Println("Конвертация всех GIF завершена.")
 }

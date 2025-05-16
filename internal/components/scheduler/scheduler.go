@@ -1,10 +1,9 @@
 package scheduler
 
 import (
+	"fmt"
 	logger "github.com/digkill/giftcoursebot/internal/components/logger"
 	"github.com/digkill/giftcoursebot/internal/helpers"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/digkill/giftcoursebot/internal/models"
@@ -40,51 +39,7 @@ func StartScheduler(bot *tgbotapi.BotAPI, userModel *models.UserModel, lessonMod
 				continue
 			}
 
-			// Отправляем урок
-			msgTitle := tgbotapi.NewMessage(user.ChatID, "🎓 "+nextLesson.Title)
-			msgTitle.ParseMode = "Markdown"
-			helpers.SafeSend(bot, msgTitle)
-
-			msgContent := tgbotapi.NewMessage(user.ChatID, nextLesson.Content)
-			msgContent.ParseMode = "Markdown"
-			helpers.SafeSend(bot, msgContent)
-
-			imageDir := "./assets/images/"
-			imageOutputPath := filepath.Join(imageDir, nextLesson.Image)
-
-			fileImage, err := os.Open(imageOutputPath)
-			if err != nil {
-				lg.Logger.Warnf("failed to open file: %w", err)
-
-			}
-			defer fileImage.Close()
-
-			err = helpers.SendMedia(fileImage, bot, user.ChatID, nextLesson.Caption)
-			if err != nil {
-				lg.Logger.Warnf("failed to send photo: %w", err)
-			}
-
-			image2OutputPath := filepath.Join(imageDir, nextLesson.Image2)
-
-			fileImage2, err := os.Open(image2OutputPath)
-			if err != nil {
-				lg.Logger.Warnf("failed to open file2: %w", err)
-
-			}
-			defer fileImage2.Close()
-
-			err = helpers.SendMedia(fileImage2, bot, user.ChatID, nextLesson.Caption2)
-			if err != nil {
-				lg.Logger.Warnf("failed to send photo2: %w", err)
-			}
-
-			reply := tgbotapi.NewMessage(user.ChatID, nextLesson.Link)
-			// reply.ParseMode = "Markdown"
-			reply.ReplyMarkup = FeedbackButtons()
-			helpers.SafeSend(bot, reply)
-			if err != nil {
-				lg.Logger.Warnf("failed to send link: %w", err)
-			}
+			helpers.SendLesson(bot, lg, nextLesson, user.ChatID, fmt.Sprintf("🤗 Держи новое занятие! № %d", daysSinceStart))
 
 			// Сохраняем факт отправки
 			lg.Logger.Infof("Урок %d отправлен пользователю %d", nextLesson.ID, user.ChatID)
