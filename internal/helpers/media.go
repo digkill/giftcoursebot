@@ -262,7 +262,7 @@ func SendLesson(bot *tgbotapi.BotAPI, lg *logger.Log, lesson *models.Lesson, cha
 	}
 	_, err = bot.SendMediaGroup(tgbotapi.NewMediaGroup(chatId, mediaGroup))
 	if err != nil {
-		log.Printf("Failed to send media group: %v", err)
+		lg.Logger.Warnf("Failed to send media group: %v", err)
 	}
 
 }
@@ -277,10 +277,14 @@ func FeedbackButtons() tgbotapi.InlineKeyboardMarkup {
 }
 
 func ConvertGifToMp4(inputPath, outputPath string) error {
-	cmd := exec.Command("ffmpeg", "-y", "-i", inputPath, "-movflags", "+faststart", "-pix_fmt", "yuv420p", outputPath)
+	cmd := exec.Command("ffmpeg", "-y", "-f", "gif", "-i", inputPath,
+		"-vf", "fps=15,scale=720:-1:flags=lanczos",
+		"-c:v", "libx264", "-pix_fmt", "yuv420p",
+		outputPath,
+	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("ffmpeg error: %v\nOutput: %s", err, out)
+		log.Printf("ffmpeg error for %s: %v\nOutput: %s", inputPath, err, out)
 		return err
 	}
 	return nil
