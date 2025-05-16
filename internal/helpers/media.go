@@ -234,8 +234,8 @@ func SendLesson(bot *tgbotapi.BotAPI, lg *logger.Log, lesson *models.Lesson, cha
 
 	imageDir := "./assets/images/"
 
-	imagePath1 := filepath.Join(imageDir, "lesson1.mp4")
-	imagePath2 := filepath.Join(imageDir, "lesson7.mp4")
+	imagePath1 := filepath.Join(imageDir, lesson.Image)
+	imagePath2 := filepath.Join(imageDir, lesson.Image2)
 
 	data1, err := os.ReadFile(imagePath1)
 	if err != nil {
@@ -257,8 +257,8 @@ func SendLesson(bot *tgbotapi.BotAPI, lg *logger.Log, lesson *models.Lesson, cha
 
 	// Формируем список media
 	mediaGroup := []interface{}{
-		CreateInputMedia("lesson1.mp4", data1, combinedCaption, true, nil),
-		CreateInputMedia("lesson2.mp4", data2, "", false, nil),
+		CreateInputMedia(lesson.Image, data1, combinedCaption, true, nil),
+		CreateInputMedia(lesson.Image2, data2, "", false, nil),
 	}
 	_, err = bot.SendMediaGroup(tgbotapi.NewMediaGroup(chatId, mediaGroup))
 	if err != nil {
